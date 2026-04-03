@@ -341,7 +341,7 @@ class Level:
                 SpikeTrap(107, 23, spike_imgs, delay=10, mode="timed"),
                 # SpikeTrap(112, 20, spike_imgs, delay=10, mode="always"),
                 SpikeTrap(119, 21, spike_imgs, delay=10, mode="always"),
-                # SpikeTrap(122, 18, spike_imgs, delay=10, mode="always"),
+                SpikeTrap(122, 18, spike_imgs, delay=10, mode="always"),
                 SpikeTrap(158, 24, spike_imgs, delay=10, mode="always"),
             ]
 
@@ -932,5 +932,28 @@ class Level:
 
         # ── DEATH WALL ───────────────────────────────────────────────
         if self.level_id == 5 and self.death_wall_active:
-            pygame.draw.rect(screen, (20, 20, 20),
-                             (0, self.death_wall_y-cam_y, self.world_w, self.world_h))
+            wall_y = int(self.death_wall_y - cam_y)
+            wall_h = max(0, HEIGHT - wall_y + self.world_h)
+
+            # main body: deep crimson fill
+            pygame.draw.rect(screen, (80, 0, 0),
+                             (0, wall_y, self.world_w, wall_h))
+
+            # pulsing glow overlay
+            pulse = abs(math.sin(pygame.time.get_ticks() * 0.004))
+            glow_alpha = int(60 + 80 * pulse)
+            glow_surf = pygame.Surface((self.world_w, wall_h), pygame.SRCALPHA)
+            glow_surf.fill((180, 0, 0, glow_alpha))
+            screen.blit(glow_surf, (0, wall_y))
+
+            # bright hot leading edge
+            edge_alpha = int(180 + 75 * pulse)
+            edge_surf = pygame.Surface((self.world_w, 6), pygame.SRCALPHA)
+            edge_surf.fill((255, 60, 60, edge_alpha))
+            screen.blit(edge_surf, (0, wall_y))
+
+            # softer glow halo just above the edge
+            for offset, alpha in [(8, 80), (16, 50), (28, 25)]:
+                halo = pygame.Surface((self.world_w, offset), pygame.SRCALPHA)
+                halo.fill((255, 30, 30, int(alpha * pulse + alpha * 0.4)))
+                screen.blit(halo, (0, wall_y - offset))
