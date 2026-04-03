@@ -242,15 +242,18 @@ LEVEL_RULES = {
 }
 
 
-def load_level(level_id):
+def load_level(level_id, silent=False):
     global level, player, gate, cam_x, cam_y, level_bg, tileset, COLS
     # ── start correct music track for this level ──────────────────────
-    if level_id in (1, 2):
-        _play_music("assets/sfx/music/level1_2.wav", volume=0.35)
-    elif level_id in (3, 4):
-        _play_music("assets/sfx/music/level3_4.wav", volume=0.35)
-    elif level_id == 5:
-        _play_music("assets/sfx/music/level5.wav",   volume=0.40)
+    # silent=True is used for the very first load at startup so the
+    # intro music (started just before the main loop) is never interrupted.
+    if not silent:
+        if level_id in (1, 2):
+            _play_music("assets/sfx/music/level1_2.wav", volume=0.35)
+        elif level_id in (3, 4):
+            _play_music("assets/sfx/music/level3_4.wav", volume=0.35)
+        elif level_id == 5:
+            _play_music("assets/sfx/music/level5.wav",   volume=0.40)
 
     map_path     = f"maps/level{level_id}_ground.csv"
     tileset_path = LEVEL_TILESETS[level_id]
@@ -260,6 +263,14 @@ def load_level(level_id):
     rules  = LEVEL_RULES.get(level_id, {})
     level  = Level(map_path, spike_images, bridge_images, rules, boss_sprites, gate_frames)
     player = Player(level.solids)
+
+    # ── per-level HP ──────────────────────────────────────────────────
+    # LEVEL_PLAYER_HP in config.py is the single place to tune difficulty.
+    # max_hp drives both the HUD heart count and respawn restoration.
+    player_max_hp    = LEVEL_PLAYER_HP.get(level_id, PLAYER_MAX_HP)
+    player.max_hp    = player_max_hp
+    player.hp        = player_max_hp
+    # ─────────────────────────────────────────────────────────────────
 
     if level_id == 5:
         player.rect.topleft = (2 * TILE_SIZE, 94 * TILE_SIZE)
@@ -282,27 +293,93 @@ def load_level(level_id):
         level.world_h - HEIGHT
     )))
 
-    print(f"Loaded Level {level_id} rules:", rules)
+    print(f"Loaded Level {level_id} rules:", rules,
+          f" | player HP: {player_max_hp}/{player_max_hp}")
 
 
-load_level(current_level)
+load_level(current_level, silent=True)   # assets only — intro music starts below
 
 
 # =========================
 # HUD / HELPERS
 # =========================
+def _draw_esc_pause_badge(screen):
+    """ESC | PAUSE badge pinned to bottom-right corner."""
+    import pygame as _pg
+    PAD     = 10
+    H       = 22
+    kf      = _pg.font.SysFont("Courier New", 13, bold=True)
+    vf      = _pg.font.SysFont("Courier New", 13)
+
+    esc_surf  = kf.render("ESC",   True, (220, 220, 220))
+    sep_surf  = vf.render("|",     True, (100, 120, 130))
+    pau_surf  = vf.render("PAUSE", True, (180, 190, 200))
+
+    inner_pad = 6
+    div_gap   = 5
+    total_w   = inner_pad + esc_surf.get_width() + div_gap + sep_surf.get_width() + div_gap + pau_surf.get_width() + inner_pad
+    bx = WIDTH  - PAD - total_w
+    by = HEIGHT - PAD - H
+
+    # dark panel
+    panel = _pg.Surface((total_w, H), _pg.SRCALPHA)
+    panel.fill((10, 12, 16, 210))
+    screen.blit(panel, (bx, by))
+    # border
+    _pg.draw.rect(screen, (60, 75, 85), (bx, by, total_w, H), 1)
+    # top bright edge
+    _pg.draw.line(screen, (80, 100, 115), (bx, by), (bx + total_w, by), 1)
+
+    # blit text pieces
+    ty = by + (H - esc_surf.get_height()) // 2
+    cx = bx + inner_pad
+    screen.blit(esc_surf,  (cx, ty));                           cx += esc_surf.get_width()  + div_gap
+    screen.blit(sep_surf,  (cx, ty));                           cx += sep_surf.get_width()  + div_gap
+    screen.blit(pau_surf,  (cx, ty))
+
+
 def draw_hud(screen, player, name):
-    PAD       = 10
-    NUM_HEARTS = PLAYER_MAX_HP   # uses config value (6)
+    PAD        = 10
     HEART_SIZE = 22
     HEART_GAP  = 5
+    NUM_HEARTS = HUD_HEARTS   # always 5, every level
 
     h_full  = pygame.transform.scale(_heart_full,  (HEART_SIZE, HEART_SIZE))
     h_empty = pygame.transform.scale(_heart_empty, (HEART_SIZE, HEART_SIZE))
 
+    # Anchor row to top-right corner
+    total_w = NUM_HEARTS * HEART_SIZE + (NUM_HEARTS - 1) * HEART_GAP
+    start_x = WIDTH - PAD - total_w
+
+    # How many HP points equal one full heart for this level.
+    max_hp       = getattr(player, "max_hp", PLAYER_MAX_HP)
+    hp_per_heart = max_hp / NUM_HEARTS
+    current_hp   = max(0, player.hp)
+
+    # Hearts drawn left to right, but drain RIGHT TO LEFT.
+    # i=0 is leftmost (last to empty), i=4 rightmost (first to empty).
+    # slot maps display index to HP bucket: slot 0 = rightmost HP bucket.
     for i in range(NUM_HEARTS):
-        img = h_full if i < player.hp else h_empty
-        screen.blit(img, (PAD + i * (HEART_SIZE + HEART_GAP), PAD))
+        slot     = NUM_HEARTS - 1 - i          # 0 = rightmost bucket
+        high_val = max_hp - slot * hp_per_heart
+        low_val  = max_hp - (slot + 1) * hp_per_heart
+        fill     = (current_hp - low_val) / hp_per_heart
+        fill     = max(0.0, min(1.0, fill))
+
+        x = start_x + i * (HEART_SIZE + HEART_GAP)
+
+        if fill <= 0:
+            screen.blit(h_empty, (x, PAD))
+        elif fill >= 1:
+            screen.blit(h_full, (x, PAD))
+        else:
+            screen.blit(h_empty, (x, PAD))
+            filled_w  = max(1, int(HEART_SIZE * fill))
+            clip_surf = h_full.subsurface((0, 0, filled_w, HEART_SIZE))
+            screen.blit(clip_surf, (x, PAD))
+
+    # ESC | PAUSE badge pinned bottom-right
+    _draw_esc_pause_badge(screen)
 
 def draw_text_box_centered(text, font, color, center_x, y, max_width, alpha, line_spacing=6):
     words, lines, current = text.split(" "), [], ""
@@ -389,16 +466,26 @@ def draw_ending():
         # ── credits card ─────────────────────────────────────────────
         # YOU can customise the lines below — add your own name, links etc.
         CREDITS = [
-            # (label,               value,                  bold,  label_col,           val_col)
-            ("404 ESCAPE",          "",                     True,  (255, 210, 60),       None),
-            ("",                    "",                     False, None,                 None),   # spacer
-            ("Created by",          "Developer",            False, (160, 180, 160),      (220, 215, 200)),
-            ("Game Design",         "Developer",            False, (160, 180, 160),      (220, 215, 200)),
-            ("Programming",         "Developer",            False, (160, 180, 160),      (220, 215, 200)),
-            ("",                    "",                     False, None,                 None),   # spacer
-            ("Music",               "Zakiro",               False, (160, 180, 160),      (220, 215, 200)),
-            ("SFX",                 "Various Free Sources", False, (160, 180, 160),      (220, 215, 200)),
-            ("Art",                 "AI Generated",         False, (160, 180, 160),      (220, 215, 200)),
+            ("404 ESCAPE",          "",                             True,  (255, 210, 60),      None),
+
+            ("",                    "",                             False, None,                None),
+
+            ("Created by",          "Minciya KS",                   False, (160, 180, 160),     (220, 215, 200)),
+            ("Role",                "Solo Developer",               False, (160, 180, 160),     (220, 215, 200)),
+
+            ("",                    "",                             False, None,                None),
+
+            ("Map Design",          "Tiled Map Editor",             False, (160, 180, 160),     (220, 215, 200)),
+            ("Assets",              "Craftpix.net, itch.io",        False, (160, 180, 160),     (220, 215, 200)),
+
+            ("",                    "",                             False, None,                None),
+
+            ("Music",               "Zakiro",                       False, (160, 180, 160),     (220, 215, 200)),
+            ("SFX",                 "Various Free Sources",         False, (160, 180, 160),     (220, 215, 200)),
+
+            ("",                    "",                             False, None,                None),
+
+            ("Special Thanks",      "opengameart.org",              False, (160, 180, 160),     (220, 215, 200)),
         ]
 
         # measure card height
