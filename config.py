@@ -37,7 +37,26 @@ PLAYER_HEIGHT = 32
 PLAYER_SPEED = 5
 PLAYER_JUMP = 12
 
-PLAYER_MAX_HP = 6
+HUD_HEARTS    = 5   # visual hearts shown — always 5, never changes
+
+# Per-level total HP pool.  HUD always shows 5 hearts.
+# hp_per_heart = LEVEL_PLAYER_HP[lvl] / HUD_HEARTS
+#   Level 1:  5 hp  → 1 hit  drains 1 full heart   (easiest)
+#   Level 2: 10 hp  → 2 hits drain 1 full heart
+#   Level 3: 15 hp  → 3 hits drain 1 full heart
+#   Level 4: 20 hp  → 4 hits drain 1 full heart
+#   Level 5: 25 hp  → 5 hits drain 1 full heart     (hardest)
+# Keep values divisible by HUD_HEARTS (5) for clean heart rendering.
+LEVEL_PLAYER_HP = {
+    1:  5,
+    2: 10,
+    3: 15,
+    4: 20,
+    5: 25,
+}
+
+PLAYER_MAX_HP = 5   # fallback default (used before a level is loaded)
+
 ATTACK_TIME = 10
 INV_TIME = 45
 DEATH_DELAY = 40
