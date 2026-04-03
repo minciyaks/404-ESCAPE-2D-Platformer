@@ -98,8 +98,11 @@ class Player:
         self.face = 1
         self.on_ground = False
 
-        self.hp    = PLAYER_MAX_HP
-        self.state = "alive"
+        # max_hp is set by load_level() in main.py after construction.
+        # We default to PLAYER_MAX_HP here so the player is never uninitialised.
+        self.max_hp = PLAYER_MAX_HP
+        self.hp     = PLAYER_MAX_HP
+        self.state  = "alive"
         self.visible = True
 
         self.inv   = False
@@ -262,7 +265,7 @@ class Player:
         self.rect.topleft    = pos if pos else self.spawn
         self.vx              = 0
         self.vy              = 0
-        self.hp              = PLAYER_MAX_HP
+        self.hp              = self.max_hp   # ← restore to level's own max, not global
         self.inv             = False
         self.state           = "alive"
         self.frozen_pos      = None
