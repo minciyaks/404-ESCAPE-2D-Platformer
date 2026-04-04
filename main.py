@@ -381,6 +381,7 @@ def draw_hud(screen, player, name):
     # ESC | PAUSE badge pinned bottom-right
     _draw_esc_pause_badge(screen)
 
+
 def draw_text_box_centered(text, font, color, center_x, y, max_width, alpha, line_spacing=6):
     words, lines, current = text.split(" "), [], ""
     for word in words:
@@ -1431,8 +1432,12 @@ while running:
                 flip(); continue
 
             if result == "void_death" and current_level == 5:
+                _sfx_void = _ui_sfx("assets/sfx/player/death.wav", 0.9)
+                if _sfx_void:
+                    _sfx_void.play()
+                    pygame.time.wait(int(_sfx_void.get_length() * 1000))   # let sound play before reset
                 pygame.mixer.stop()
-                load_level(current_level)
+                load_level(current_level, silent=True)
                 flip(); continue
 
             if result == "player_dead":
