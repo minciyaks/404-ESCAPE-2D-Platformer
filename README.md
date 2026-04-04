@@ -52,13 +52,6 @@ A mysterious file appears on your desktop — one that shouldn't be there. The m
 
 ---
 
-### Preview
-
-https://github.com/user-attachments/assets/217c0196-2814-4540-8742-0e3bce92d3df
-
-> Level 2 — Pressure
-
----
 ## Controls
 
 | Key | Action |
