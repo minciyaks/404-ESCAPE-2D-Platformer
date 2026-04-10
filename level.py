@@ -956,4 +956,5 @@ class Level:
             for offset, alpha in [(8, 80), (16, 50), (28, 25)]:
                 halo = pygame.Surface((self.world_w, offset), pygame.SRCALPHA)
                 halo.fill((255, 30, 30, int(alpha * pulse + alpha * 0.4)))
+
                 screen.blit(halo, (0, wall_y - offset))
