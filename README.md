@@ -138,24 +138,42 @@ A mysterious file appears on your desktop — one that shouldn't be there. The m
 
 ## Installation
 
-### Requirements
-
-- Python 3.8+
-- Pygame 2.x
-
-### Setup
+### Option 1 (Recommended – works on latest Python)
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/404-escape.git
-cd 404-escape
+# Clone the repository
+git clone https://github.com/minciyaks/404-ESCAPE-2D-Platformer.git
+cd 404-ESCAPE-2D-Platformer
 
-# 2. Install dependencies
-pip install pygame
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate  # Windows
 
-# 3. Run the game
+# Install dependencies
+pip install pygame-ce
+
+# Run the game
 python main.py
 ```
+
+---
+
+### Option 2 (Stable alternative)
+
+```bash
+# Use Python 3.10 or 3.11
+
+pip install pygame
+python main.py
+```
+
+---
+
+### Requirements
+
+* Python 3.10+
+* Recommended: Python 3.14 with pygame-ce
+
 
 ---
 
